@@ -9,8 +9,8 @@ from selenium.webdriver.support import expected_conditions as EC
 base_url = 'https://www.booking.com/index.es.html'
 cities = ['Barcelona', 'Madrid']  #  cities
 timeframes = [
-    ('2025-10-10', '2025-10-25'),  # Event week
-    ('2025-11-01', '2025-11-15')   # Non-event week
+    ('2025-01-25', '2025-02-10'),  # Event week
+    ('2025-02-10', '2025-02-25')   # Non-event week
 ]
 output_dir = './scraped_hotel_urls/'  # Directory to save the text files
 hotels_webpage_class = 'a78ca197d0'
@@ -54,6 +54,7 @@ for city in cities:
         # Select start and end dates
         calendar_path = '//div[@id="calendar-searchboxdatepicker"]//table[@class="eb03f3f27f"]//tbody//td[@class="b80d5adb18"]//span[@class="cf06f772fa ef091eb985"]'
         dates = driver.find_elements('xpath', calendar_path)
+        print(dates)
         for date in dates:
             if date.get_attribute("data-date") == start_date:
                 date.click()

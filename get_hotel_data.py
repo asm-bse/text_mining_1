@@ -18,7 +18,8 @@ rating_xpath = '//div[contains(@id, "js--hp-gallery-scorecard")]'
 rating_class = 'ac4a7896c7'
 driver = Chrome()
 directory = './scraped_hotel_urls/'
-df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "Date", "Rating"])
+df = pd.DataFrame(columns=["URL", "Hotel","Price", "Description", "City", "Date", "Rating"])
+
 # Loop through the filenames
 for filename in os.listdir(directory):
     # Create the full path
@@ -34,7 +35,21 @@ for filename in os.listdir(directory):
             url = line.strip()
             driver.get(url)
             time.sleep(3)
+            ''' opens checkin calendar, but not needed at the moment
+            try:
+                buttons = driver.find_elements(By.XPATH, '//button[@data-testid="date-display-field-start"]')
+                if len(buttons) > 1:
+                    check_in_button = buttons[1]  # Index 1 for the second button
+                    check_in_button.click()
+                else:
+                    print("Second button not found")
+                # Use the data-testid attribute for a precise and robust selector
+                time.sleep(3)  # Allow time for the calendar to open
+            except NoSuchElementException:
+                print("Calendar button not found.")'''
             hotel_rating = 999
+            print(df.head())
+            print(df["Price"])
             try:
                 print(date)
                 hotel_description = driver.find_element(By.XPATH, description_xpath).text
@@ -50,21 +65,26 @@ for filename in os.listdir(directory):
                         print("Rating not found")
                 except Exception as e:
                     print(f"Error: {e}")
-                #hotel_rating = driver.find_element(By.XPATH, rating_class).text
-                #hotel_address = driver.find_element(By.XPATH, '//span[@id="showMap2"]').text
-                #hotel_price = driver.find_element(By.XPATH, '//div[@class="bui-price-display__value prco-valign-middle-helper"]').text
+                try:
+                    price_element = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[contains(@class, "bui-price-display__value")]'))
+                    )
+                    hotel_price = price_element.text
+                    print(f"Hotel Price: {hotel_price}")
+                except:
+                    print("Price not found or page did not load properly.")
+
                 print('\n===============================\n')
                 print(f"Hotel name: {hotel_name}\n")
                 print(f"{hotel_description}\n")
                 print(f"Hotel rating: {hotel_rating}\n")
 
-                df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel":hotel_name, "Description": hotel_description, "City": city,
+                df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel":hotel_name, "Price":hotel_price, "Description": hotel_description, "City": city,
                         "Date": date, "Rating": hotel_rating}])], ignore_index=True)
                 #print(f"{hotel_name}: {hotel_address}, {hotel_price}")
             except NoSuchElementException:
                 print(f"Error: {url}")
                 df = pd.concat([df, pd.DataFrame([{"URL": url, "Description": None}])], ignore_index=True)
-                
 time.sleep(3)
 driver.quit()
 
