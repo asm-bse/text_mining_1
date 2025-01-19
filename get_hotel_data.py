@@ -10,13 +10,15 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import re
 
 description_xpath = '//p[contains(@class, "b3efd73f69")]' #Not sure about sustainability of this xpath
 description_class = 'a53cbfa6de b3efd73f69'
-
+rating_xpath = '//div[contains(@id, "js--hp-gallery-scorecard")]'
+rating_class = 'ac4a7896c7'
 driver = Chrome()
 directory = './scraped_hotel_urls/'
-df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "Date"])
+df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "Date", "Rating"])
 # Loop through the filenames
 for filename in os.listdir(directory):
     # Create the full path
@@ -31,24 +33,40 @@ for filename in os.listdir(directory):
             url = line.strip()
             driver.get(url)
             time.sleep(3)
+            hotel_rating = 999
             try:
                 hotel_description = driver.find_element(By.XPATH, description_xpath).text
                 hotel_name = driver.find_element(By.CLASS_NAME, 'pp-header__title').text
-
+                try:
+                    rating_text = driver.find_element(By.XPATH, rating_xpath).text
+                    #print(f"Rating text: {rating_text}") uncomment for debugging or parcing more feedback features
+                    rating_match = re.search(r'\d+(\.\d+)?', rating_text)
+                    if rating_match:
+                        hotel_rating = rating_match.group()
+                        #print(f"Hotel rating: {hotel_rating}")
+                    else:
+                        print("Rating not found")
+                except Exception as e:
+                    print(f"Error: {e}")
+                #hotel_rating = driver.find_element(By.XPATH, rating_class).text
                 #hotel_address = driver.find_element(By.XPATH, '//span[@id="showMap2"]').text
                 #hotel_price = driver.find_element(By.XPATH, '//div[@class="bui-price-display__value prco-valign-middle-helper"]').text
                 print('\n===============================\n')
-                print(f"{hotel_description}")
-                df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel":hotel_name, "Description": hotel_description,                         "City": city,
-                        "Date": date}])], ignore_index=True)
+                print(f"Hotel name: {hotel_name}\n")
+                print(f"{hotel_description}\n")
+                print(f"Hotel rating: {hotel_rating}\n")
+
+                df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel":hotel_name, "Description": hotel_description, "City": city,
+                        "Date": date, "Rating": hotel_rating}])], ignore_index=True)
                 #print(f"{hotel_name}: {hotel_address}, {hotel_price}")
             except NoSuchElementException:
                 print(f"Error: {url}")
                 df = pd.concat([df, pd.DataFrame([{"URL": url, "Description": None}])], ignore_index=True)
                 
-time.sleep(99)
+time.sleep(3)
 driver.quit()
 
+df['Rating'] = df['Rating'].replace(999, 'NaN') #initially we put 999 as rating for hotels without rating, here we replace it with NaN
 df.to_csv('scraped_hotel_data.csv', index=False)
 
-df.head()
+print(df.head())
