@@ -27,7 +27,8 @@ for filename in os.listdir(directory):
     if os.path.isfile(file_path):
         print(f"Processing file: {filename}")
         city = filename.split('_')[0]  # The first part before the first underscore
-        date = filename.split('_')[-1].split('.')[0] #not ready yet
+        match = re.search(r'(\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2})', filename)
+        date = match.group(1)
     with open(file_path) as f:
         for line in f:
             url = line.strip()
@@ -35,6 +36,7 @@ for filename in os.listdir(directory):
             time.sleep(3)
             hotel_rating = 999
             try:
+                print(date)
                 hotel_description = driver.find_element(By.XPATH, description_xpath).text
                 hotel_name = driver.find_element(By.CLASS_NAME, 'pp-header__title').text
                 try:
