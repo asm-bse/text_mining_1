@@ -1,4 +1,3 @@
-
 import time
 import pandas as pd
 from selenium.webdriver import Chrome
@@ -18,7 +17,8 @@ rating_xpath = '//div[contains(@id, "js--hp-gallery-scorecard")]'
 rating_class = 'ac4a7896c7'
 driver = Chrome()
 directory = './scraped_hotel_urls/'
-df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "Date", "Rating"])
+df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "start_date", "end_date", "Rating"])
+
 # Loop through the filenames
 for filename in os.listdir(directory):
     # Create the full path
@@ -27,46 +27,47 @@ for filename in os.listdir(directory):
     if os.path.isfile(file_path):
         print(f"Processing file: {filename}")
         city = filename.split('_')[0]  # The first part before the first underscore
-        date = filename.split('_')[-1].split('.')[0] #not ready yet
-    with open(file_path) as f:
-        for line in f:
-            url = line.strip()
-            driver.get(url)
-            time.sleep(3)
-            hotel_rating = 999
-            try:
-                hotel_description = driver.find_element(By.XPATH, description_xpath).text
-                hotel_name = driver.find_element(By.CLASS_NAME, 'pp-header__title').text
+        match = re.search(r'_(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})_', filename)
+        if match:
+            start_date = match.group(1)
+            end_date = match.group(2)
+        total_urls = 0
+        processed_urls = 0
+        with open(file_path) as f:
+            lines = f.readlines()
+            total_urls = len(lines)
+            for line in lines:
+                url = line.strip()
+                processed_urls += 1
+                driver.get(url)
+                time.sleep(3)
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(1)
+                hotel_rating = 999
                 try:
-                    rating_text = driver.find_element(By.XPATH, rating_xpath).text
-                    #print(f"Rating text: {rating_text}") uncomment for debugging or parcing more feedback features
-                    rating_match = re.search(r'\d+(\.\d+)?', rating_text)
-                    if rating_match:
-                        hotel_rating = rating_match.group()
-                        #print(f"Hotel rating: {hotel_rating}")
-                    else:
-                        print("Rating not found")
-                except Exception as e:
-                    print(f"Error: {e}")
-                #hotel_rating = driver.find_element(By.XPATH, rating_class).text
-                #hotel_address = driver.find_element(By.XPATH, '//span[@id="showMap2"]').text
-                #hotel_price = driver.find_element(By.XPATH, '//div[@class="bui-price-display__value prco-valign-middle-helper"]').text
-                print('\n===============================\n')
-                print(f"Hotel name: {hotel_name}\n")
-                print(f"{hotel_description}\n")
-                print(f"Hotel rating: {hotel_rating}\n")
+                    hotel_description = driver.find_element(By.XPATH, description_xpath).text
+                    hotel_name = driver.find_element(By.CLASS_NAME, 'pp-header__title').text
+                    try:
+                        rating_text = driver.find_element(By.XPATH, rating_xpath).text
+                        rating_match = re.search(r'\d+(\.\d+)?', rating_text)
+                        if rating_match:
+                            hotel_rating = rating_match.group()
+                    except Exception:
+                        pass
 
-                df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel":hotel_name, "Description": hotel_description, "City": city,
-                        "Date": date, "Rating": hotel_rating}])], ignore_index=True)
-                #print(f"{hotel_name}: {hotel_address}, {hotel_price}")
-            except NoSuchElementException:
-                print(f"Error: {url}")
-                df = pd.concat([df, pd.DataFrame([{"URL": url, "Description": None}])], ignore_index=True)
+                    df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel": hotel_name, "Description": hotel_description, "City": city,
+                            "start_date": start_date, "end_date": end_date, "Rating": hotel_rating}])], ignore_index=True)
+
+                except NoSuchElementException:
+                    df = pd.concat([df, pd.DataFrame([{"URL": url, "Description": None}])], ignore_index=True)
+
+                print(f"Processed {processed_urls}/{total_urls} URLs in {filename}")
+                print("====================================")
                 
-time.sleep(3)
+time.sleep(1)
 driver.quit()
 
 df['Rating'] = df['Rating'].replace(999, 'NaN') #initially we put 999 as rating for hotels without rating, here we replace it with NaN
 df.to_csv('scraped_hotel_data.csv', index=False)
 
-print(df.head())
+print("Processing complete. Data saved to scraped_hotel_data.csv")
