@@ -17,7 +17,7 @@ rating_xpath = '//div[contains(@id, "js--hp-gallery-scorecard")]'
 rating_class = 'ac4a7896c7'
 driver = Chrome()
 directory = './scraped_hotel_urls/'
-df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "start_date", "end_date", "Rating"])
+df = pd.DataFrame(columns=["URL", "Hotel", "Description", "City", "start_date", "end_date", "Rating", "Price"])
 
 # Loop through the filenames
 for filename in os.listdir(directory):
@@ -33,6 +33,7 @@ for filename in os.listdir(directory):
             end_date = match.group(2)
         total_urls = 0
         processed_urls = 0
+        print("====================================")
         with open(file_path) as f:
             lines = f.readlines()
             total_urls = len(lines)
@@ -45,6 +46,15 @@ for filename in os.listdir(directory):
                 time.sleep(1)
                 hotel_rating = 999
                 try:
+                    price_element = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[contains(@class, "bui-price-display__value")]'))
+                    )
+                    hotel_price = price_element.text
+                    #print(f"Hotel Price: {hotel_price}")
+                except:
+                    hotel_price = 9999999
+                    print("Price not found or page did not load properly.")
+                try:
                     hotel_description = driver.find_element(By.XPATH, description_xpath).text
                     hotel_name = driver.find_element(By.CLASS_NAME, 'pp-header__title').text
                     try:
@@ -56,13 +66,13 @@ for filename in os.listdir(directory):
                         pass
 
                     df = pd.concat([df, pd.DataFrame([{"URL": url, "Hotel": hotel_name, "Description": hotel_description, "City": city,
-                            "start_date": start_date, "end_date": end_date, "Rating": hotel_rating}])], ignore_index=True)
+                            "start_date": start_date, "end_date": end_date, "Rating": hotel_rating, "Price": hotel_price}])], ignore_index=True)
 
                 except NoSuchElementException:
                     df = pd.concat([df, pd.DataFrame([{"URL": url, "Description": None}])], ignore_index=True)
 
                 print(f"Processed {processed_urls}/{total_urls} URLs in {filename}")
-                print("====================================")
+                
                 
 time.sleep(1)
 driver.quit()
